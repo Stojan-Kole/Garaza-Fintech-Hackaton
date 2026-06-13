@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #070B14;
+  color: #CBD5E1;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2D45;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2D3F5C;
+}
+
+/* Score bar gradient */
+.score-track {
+  background: linear-gradient(
+    to right,
+    #10B981 0%,
+    #10B981 56%,
+    #F59E0B 56%,
+    #F59E0B 72%,
+    #EF4444 72%,
+    #EF4444 100%
+  );
+}
+
+/* Glowing verdict borders */
+.verdict-match  { box-shadow: 0 0 0 1px rgba(239,68,68,0.3), 0 4px 24px rgba(239,68,68,0.12); }
+.verdict-review { box-shadow: 0 0 0 1px rgba(245,158,11,0.3), 0 4px 24px rgba(245,158,11,0.12); }
+.verdict-clear  { box-shadow: 0 0 0 1px rgba(16,185,129,0.3), 0 4px 24px rgba(16,185,129,0.10); }
+
+/* Monospace tag */
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* Pipeline connector */
+.pipeline-line {
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: -12px;
+  width: 2px;
+  background: linear-gradient(to bottom, #1E2D45, transparent);
+}
