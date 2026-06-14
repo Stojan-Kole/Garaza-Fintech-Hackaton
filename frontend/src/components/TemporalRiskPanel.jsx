@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
-import { TrendingUp, AlertTriangle, Shield, Clock, ChevronDown, ChevronUp, Users, Activity } from 'lucide-react'
-import { temporalWatchlist } from '../api'
+import { useState } from 'react'
+import { TrendingUp, AlertTriangle } from 'lucide-react'
 
 const RISK_STYLE = {
   LOW:       { bar: 'bg-green-500',   badge: 'bg-green-500/15 text-green-400 border-green-500/30',   label: 'Low' },
@@ -74,44 +73,175 @@ function HistoryChart({ history }) {
   )
 }
 
-function FeatureBreakdown({ breakdown }) {
-  const [expanded, setExpanded] = useState(false)
-  const shown = expanded ? breakdown : breakdown.slice(0, 4)
+function contributionColor(contribution) {
+  if (contribution >= 0.08) return { bar: 'bg-red-500',   text: 'text-red-400' }
+  if (contribution >= 0.03) return { bar: 'bg-amber-500', text: 'text-amber-400' }
+  return { bar: 'bg-slate-600', text: 'text-slate-500' }
+}
 
+function formatValue(name, value) {
+  if (name === 'high_risk_country' || name === 'direct_blacklist_exposure' || name === 'indirect_blacklist_exposure')
+    return value === 1 ? 'Yes' : 'No'
+  if (name === 'shortest_path_to_blacklisted')
+    return value >= 10 ? 'No path' : `${value.toFixed(0)} hop${value !== 1 ? 's' : ''}`
+  if (name === 'name_sim_to_blacklist')
+    return `${(value * 100).toFixed(0)}%`
+  if (name === 'propagated_graph_risk')
+    return value.toFixed(2)
+  if (Number.isInteger(value) || value % 1 === 0)
+    return value.toFixed(0)
+  return value.toFixed(2)
+}
+
+function FeatureBreakdown({ breakdown }) {
   return (
     <div>
-      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">
-        Feature Contributions
+      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+        Factor Analysis
       </div>
-      <div className="space-y-2">
-        {shown.map(f => (
-          <div key={f.name} className="space-y-0.5">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] text-slate-500 truncate flex-1 mr-2" title={f.explanation}>
-                {f.name.replace(/_/g, ' ')}
-              </span>
-              <span className="text-[10px] font-mono text-slate-400 flex-shrink-0">
-                {f.value.toFixed(2)}
-              </span>
+      <div className="space-y-3">
+        {breakdown.map(f => {
+          const col = contributionColor(f.contribution)
+          const barWidth = Math.min(100, f.contribution * 500)
+          return (
+            <div key={f.name} className="space-y-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[11px] font-medium text-slate-300 leading-tight">
+                  {f.label || f.name.replace(/_/g, ' ')}
+                </span>
+                <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${col.text}`}>
+                  {formatValue(f.name, f.value)}
+                </span>
+              </div>
+              <div className="h-0.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${col.bar}`}
+                  style={{ width: `${barWidth}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-600 leading-relaxed">
+                {f.explanation}
+              </p>
             </div>
-            <div className="h-0.5 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500/60 rounded-full"
-                style={{ width: `${Math.min(100, f.contribution * 500)}%` }}
-              />
-            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const RISK_TEXT = {
+  LOW: 'text-green-400', ELEVATED: 'text-blue-400',
+  HIGH: 'text-amber-400', VERY_HIGH: 'text-orange-400', CRITICAL: 'text-red-400',
+}
+const RISK_BORDER_BG = {
+  LOW:       'border-slate-700/50 bg-slate-800/20',
+  ELEVATED:  'border-blue-500/25 bg-blue-500/5',
+  HIGH:      'border-amber-500/25 bg-amber-500/5',
+  VERY_HIGH: 'border-orange-500/25 bg-orange-500/5',
+  CRITICAL:  'border-red-500/30 bg-red-500/7',
+}
+const RISK_DIVIDER = {
+  LOW: 'border-slate-700/50', ELEVATED: 'border-blue-500/20',
+  HIGH: 'border-amber-500/20', VERY_HIGH: 'border-orange-500/20', CRITICAL: 'border-red-500/20',
+}
+const ACTIONS = {
+  LOW:       'No immediate action required. Include in standard periodic review cycle.',
+  ELEVATED:  'Flag for quarterly compliance review. Monitor for continued risk escalation.',
+  HIGH:      'Escalate to compliance officer for enhanced due diligence. Document risk assessment.',
+  VERY_HIGH: 'Senior compliance review required. Consider placing transaction restrictions pending investigation.',
+  CRITICAL:  'Block all transactions immediately. Escalate to senior compliance officer. Regulatory notification may be required.',
+}
+
+function Conclusion({ entity_name, entity_type, risk_score, risk_level, reasons,
+                      history, blacklisted, blacklisted_neighbors, feature_breakdown }) {
+  const textCol  = RISK_TEXT[risk_level]  || 'text-slate-400'
+  const borderBg = RISK_BORDER_BG[risk_level] || RISK_BORDER_BG.LOW
+  const divider  = RISK_DIVIDER[risk_level]   || RISK_DIVIDER.LOW
+  const styleBar = (RISK_STYLE[risk_level] || RISK_STYLE.LOW).bar
+  const action   = ACTIONS[risk_level] || ACTIONS.LOW
+
+  // Build fast feature lookup
+  const feat = {}
+  feature_breakdown?.forEach(f => { feat[f.name] = f.value })
+
+  // Trend: compare current vs 3 years prior
+  const years   = Object.keys(history || {}).sort()
+  const scores  = years.map(y => history[y])
+  const current = scores.at(-1) ?? risk_score
+  const prior   = scores.at(-4) ?? scores.at(0) ?? current
+  const delta   = current - prior
+  let trendText
+  if      (delta >  20) trendText = `Risk has escalated sharply (+${delta.toFixed(0)} pts over 3 years) — accelerating exposure that warrants urgent review.`
+  else if (delta >   7) trendText = `Risk shows a consistent upward trend (+${delta.toFixed(0)} pts over 3 years), indicating growing network entanglement.`
+  else if (delta < -20) trendText = `Risk has decreased significantly (${delta.toFixed(0)} pts over 3 years), possibly reflecting ownership restructuring or reduced sanctions proximity.`
+  else if (delta <  -7) trendText = `Risk shows a mild downward trend (${delta.toFixed(0)} pts over 3 years) — improvement but continued monitoring is warranted.`
+  else                  trendText = `Risk profile has been relatively stable over the past 3 years (${delta >= 0 ? '+' : ''}${delta.toFixed(0)} pts).`
+
+  // Specific flags from actual feature values
+  const flags = []
+  if (blacklisted)
+    flags.push('Entity is directly listed on a sanctions list — all transactions must be blocked.')
+  if (blacklisted_neighbors?.length > 0)
+    flags.push(`${blacklisted_neighbors.length} direct business partner${blacklisted_neighbors.length > 1 ? 's are' : ' is'} already sanctioned.`)
+  if (!blacklisted && feat.shortest_path_to_blacklisted != null && feat.shortest_path_to_blacklisted < 3)
+    flags.push(`Only ${feat.shortest_path_to_blacklisted.toFixed(0)} ownership hop${feat.shortest_path_to_blacklisted !== 1 ? 's' : ''} from a sanctioned entity — within enhanced due diligence threshold.`)
+  if (feat.high_risk_country === 1)
+    flags.push('Registered in or associated with an OFAC-sanctioned or FATF high-risk country.')
+  if (feat.ownership_changes_last_year >= 3)
+    flags.push(`${feat.ownership_changes_last_year.toFixed(0)} ownership changes in the past year — pattern consistent with pre-designation restructuring.`)
+  if (!blacklisted && feat.indirect_blacklist_exposure === 1 && !(blacklisted_neighbors?.length > 0))
+    flags.push('A direct business partner is on a sanctions list, creating indirect exposure.')
+
+  // How many features are materially elevated
+  const elevatedCount = feature_breakdown?.filter(f => f.contribution >= 0.03).length ?? 0
+  const topReason = reasons?.[0]
+  const levelLabel = (RISK_STYLE[risk_level] || RISK_STYLE.LOW).label
+
+  return (
+    <div className="px-4 pt-4 pb-6">
+      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+        Compliance Assessment
+      </div>
+      <div className={`rounded-lg border p-4 space-y-3 ${borderBg}`}>
+
+        {/* Summary sentence */}
+        <p className="text-xs text-slate-300 leading-relaxed">
+          <span className={`font-bold ${textCol}`}>{entity_name}</span>
+          {' '}({entity_type}) carries a{' '}
+          <span className={`font-bold ${textCol}`}>{levelLabel.toLowerCase()} risk profile</span>
+          {' '}with an emerging risk score of{' '}
+          <span className="font-mono font-bold text-slate-200">{risk_score.toFixed(0)}/100</span>
+          {elevatedCount > 0 && <>, with <span className="font-semibold text-slate-200">{elevatedCount} of 17</span> indicators materially elevated</>}.
+          {topReason && <> The primary driver is: <span className="italic text-slate-400">{topReason.charAt(0).toLowerCase() + topReason.slice(1)}</span>.</>}
+        </p>
+
+        {/* Trend */}
+        <p className="text-xs text-slate-400 leading-relaxed">{trendText}</p>
+
+        {/* Specific flags */}
+        {flags.length > 0 && (
+          <ul className="space-y-1.5 pt-1">
+            {flags.map((flag, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                <span className={`mt-0.5 flex-shrink-0 font-bold ${textCol}`}>›</span>
+                {flag}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Recommended action */}
+        <div className={`pt-3 border-t ${divider}`}>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex-shrink-0">
+              Recommended action
+            </span>
           </div>
-        ))}
+          <p className={`mt-1 text-xs font-medium leading-relaxed ${textCol}`}>{action}</p>
+        </div>
+
       </div>
-      {breakdown.length > 4 && (
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="mt-2 text-[10px] text-slate-600 hover:text-slate-400 flex items-center gap-1"
-        >
-          {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-          {expanded ? 'Show less' : `Show ${breakdown.length - 4} more`}
-        </button>
-      )}
     </div>
   )
 }
@@ -232,19 +362,36 @@ export default function TemporalRiskPanel({ result, onSelectAlternate }) {
         )}
       </div>
 
-      <div className="px-4 py-3 space-y-4">
+      <div className="px-4 py-3 space-y-4 border-b border-slate-800">
         {/* Feature breakdown */}
         {feature_breakdown?.length > 0 && (
           <FeatureBreakdown breakdown={feature_breakdown} />
         )}
-
-        {/* Other candidates */}
-        <SearchCandidates
-          candidates={search_candidates}
-          selectedId={entity_id}
-          onSelect={onSelectAlternate}
-        />
       </div>
+
+      {/* Conclusion */}
+      <Conclusion
+        entity_name={entity_name}
+        entity_type={entity_type}
+        risk_score={risk_score}
+        risk_level={risk_level}
+        reasons={reasons}
+        history={history}
+        blacklisted={blacklisted}
+        blacklisted_neighbors={blacklisted_neighbors}
+        feature_breakdown={feature_breakdown}
+      />
+
+      {/* Other candidates */}
+      {search_candidates?.length > 1 && (
+        <div className="px-4 pb-6">
+          <SearchCandidates
+            candidates={search_candidates}
+            selectedId={entity_id}
+            onSelect={onSelectAlternate}
+          />
+        </div>
+      )}
     </div>
   )
 }

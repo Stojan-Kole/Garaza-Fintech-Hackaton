@@ -133,7 +133,7 @@ class TemporalRiskEngine:
             "risk_level": _risk_level(risk_score),
             "reasons": reasons,
             "history": history,
-            "feature_breakdown": breakdown[:8],
+            "feature_breakdown": breakdown,
         }
 
     def search(self, query: str, top_k: int = 10) -> list:

@@ -28,25 +28,99 @@ FEATURE_NAMES = [
     "high_risk_country",
 ]
 
-# Human-readable explanation for each feature when elevated
+# Short business-friendly display names
+FEATURE_LABELS = {
+    "shortest_path_to_blacklisted":  "Proximity to Sanctioned Entities",
+    "blacklisted_neighbors":         "Direct Sanctioned Connections",
+    "paths_to_blacklisted":          "Routes Through Sanctioned Network",
+    "propagated_graph_risk":         "Network Contamination Score",
+    "indirect_blacklist_exposure":   "Indirect Sanctions Exposure",
+    "direct_blacklist_exposure":     "Currently Sanctioned",
+    "betweenness_centrality":        "Gatekeeping Role in Network",
+    "graph_degree":                  "Total Ownership Links",
+    "ownership_changes_last_year":   "Ownership Changes (Last Year)",
+    "new_connections_last_year":     "New Business Connections (Last Year)",
+    "ownership_growth_rate":         "Ownership Portfolio Growth Rate",
+    "structure_change_rate":         "Restructuring Intensity",
+    "owned_companies_count":         "Companies Directly Controlled",
+    "ownership_chain_depth":         "Ownership Chain Depth",
+    "name_sim_to_blacklist":         "Name Match to Sanctions List",
+    "alias_count":                   "Registered Aliases",
+    "high_risk_country":             "High-Risk Jurisdiction",
+}
+
+# Business-impact descriptions (used in risk factors list and feature breakdown)
 FEATURE_EXPLANATIONS = {
-    "shortest_path_to_blacklisted": "High ownership proximity to sanctioned entities",
-    "blacklisted_neighbors": "Direct connections to sanctioned entities",
-    "paths_to_blacklisted": "Multiple paths leading to sanctioned entities",
-    "propagated_graph_risk": "Risk propagated through the ownership network",
-    "indirect_blacklist_exposure": "Directly connected to a sanctioned entity",
-    "direct_blacklist_exposure": "Entity appears on a sanctions list",
-    "betweenness_centrality": "Acts as key intermediary in ownership network",
-    "graph_degree": "High number of ownership connections",
-    "ownership_changes_last_year": "Multiple ownership structure changes detected",
-    "new_connections_last_year": "Rapid acquisition of new network connections",
-    "ownership_growth_rate": "Rapid increase in number of owned companies",
-    "structure_change_rate": "Significant restructuring of ownership positions",
-    "owned_companies_count": "Controls a large number of companies",
-    "ownership_chain_depth": "Deep multi-layer ownership chain structure",
-    "name_sim_to_blacklist": "Name closely resembles known sanctioned entities",
-    "alias_count": "Entity has multiple registered aliases",
-    "high_risk_country": "Associated with a high-risk jurisdiction",
+    "shortest_path_to_blacklisted": (
+        "Ownership hops to the nearest sanctioned entity — distance 1 means a direct business partner "
+        "is sanctioned, distance 2 means one intermediary company in between. "
+        "Anything below 3 requires enhanced due diligence under most compliance frameworks."
+    ),
+    "blacklisted_neighbors": (
+        "Count of direct business partners (co-owners or owned companies) already on a sanctions list. "
+        "Even a single direct connection can trigger transaction blocking obligations for counterparties."
+    ),
+    "paths_to_blacklisted": (
+        "Number of distinct ownership routes leading to a sanctioned entity. "
+        "More routes makes it harder to argue the exposure is coincidental — each path is a potential channel for value transfer."
+    ),
+    "propagated_graph_risk": (
+        "Sanctions risk transmitted through the ownership graph using exponential decay: "
+        "1.0 for a direct link, 0.37 two hops away, 0.14 three hops. "
+        "Captures indirect exposure that doesn't appear in a simple name-match screen."
+    ),
+    "indirect_blacklist_exposure": (
+        "A direct business partner is on a sanctions list. "
+        "Even without a direct designation, many banks treat this as equivalent exposure and apply the same blocking rules."
+    ),
+    "direct_blacklist_exposure": (
+        "The entity itself appears on a current sanctions list. "
+        "All transactions with a directly designated entity must be blocked — no exceptions without OFAC license."
+    ),
+    "betweenness_centrality": (
+        "How often this entity sits on the shortest path between other entities in the ownership network. "
+        "High centrality indicates a structural intermediary — a potential conduit for moving value across the network while obscuring origin."
+    ),
+    "graph_degree": (
+        "Total count of direct ownership relationships (incoming and outgoing). "
+        "More connections means a larger surface area for sanctions exposure and significantly more complex due diligence."
+    ),
+    "ownership_changes_last_year": (
+        "Number of ownership stakes added or removed in the past year. "
+        "Rapid restructuring ahead of a designation is a documented pre-sanction pattern — entities shedding visible connections before listing."
+    ),
+    "new_connections_last_year": (
+        "New network neighbors this entity acquired in the past year. "
+        "Sudden growth in connections, especially toward already-sanctioned nodes, is one of the strongest forward-looking risk signals."
+    ),
+    "ownership_growth_rate": (
+        "Rate of change in directly controlled companies year over year. "
+        "Rapid portfolio expansion — particularly into high-risk jurisdictions — can indicate sanctions evasion via corporate proliferation."
+    ),
+    "structure_change_rate": (
+        "Ownership changes as a proportion of total links in the network. "
+        "High values mean this entity is restructuring faster than its peers — disproportionate activity relative to the network."
+    ),
+    "owned_companies_count": (
+        "Number of companies this entity directly controls through ownership stakes. "
+        "Shell company networks typically involve a single beneficial owner controlling many entities across multiple jurisdictions."
+    ),
+    "ownership_chain_depth": (
+        "Length of the longest chain of companies controlled through layered ownership. "
+        "Each additional layer obscures the true beneficial owner — chains of 3 or more are a classic obfuscation technique flagged in FATF guidance."
+    ),
+    "name_sim_to_blacklist": (
+        "Phonetic and string similarity between this entity's name and names already on the OFAC SDN list, "
+        "accounting for transliteration variants across Cyrillic, Arabic, and Latin scripts."
+    ),
+    "alias_count": (
+        "Number of alternative names this entity is registered under. "
+        "Multiple aliases — especially across languages or scripts — can indicate identity obfuscation or deliberate fragmentation of a paper trail."
+    ),
+    "high_risk_country": (
+        "Whether this entity's nationality or country of registration is on the FATF blacklist "
+        "or subject to OFAC country-based sanctions programs (Iran, Russia, North Korea, Syria, Belarus, Venezuela, Cuba, Myanmar)."
+    ),
 }
 
 

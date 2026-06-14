@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-from .features import FEATURE_NAMES, FEATURE_EXPLANATIONS
+from .features import FEATURE_NAMES, FEATURE_LABELS, FEATURE_EXPLANATIONS
 
 MODEL_CACHE = Path(".cache/temporal_model.pkl")
 
@@ -74,6 +74,7 @@ class RiskPredictor:
         for i, fname in enumerate(FEATURE_NAMES):
             result.append({
                 "name": fname,
+                "label": FEATURE_LABELS.get(fname, fname),
                 "value": round(float(features[i]), 4),
                 "importance": round(float(self._importances[i]), 4),
                 "contribution": round(float(contributions[i]), 4),
