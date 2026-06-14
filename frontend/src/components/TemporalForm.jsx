@@ -1,9 +1,18 @@
 import { useState } from 'react'
-import { TrendingUp, Loader2, Search, ListFilter } from 'lucide-react'
+import { TrendingUp, TrendingDown, Loader2, Search, ListFilter, AlertTriangle, AlignLeft } from 'lucide-react'
+
+const WATCHLIST_VIEWS = [
+  { id: 'top',           label: 'Highest risk',   icon: AlertTriangle,  desc: 'Top 50 by current score' },
+  { id: 'rising',        label: 'Rising risk',    icon: TrendingUp,     desc: 'Biggest YoY increase' },
+  { id: 'critical_edge', label: 'Near-critical',  icon: AlertTriangle,  desc: 'Score 60–79' },
+  { id: 'declining',     label: 'Declining risk', icon: TrendingDown,   desc: 'Biggest YoY decrease' },
+  { id: 'name',          label: 'Alphabetical',   icon: AlignLeft,      desc: 'A–Z' },
+]
 
 export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
   const [name, setName] = useState('')
-  const [mode, setMode] = useState('search')  // 'search' | 'watchlist'
+  const [mode, setMode] = useState('search')   // 'search' | 'watchlist'
+  const [activeView, setActiveView] = useState('top')
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -11,9 +20,14 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
     onAnalyze({ entity_name: name.trim(), top_k: 5 })
   }
 
-  const handleWatchlist = () => {
+  const handleWatchlistMode = () => {
     setMode('watchlist')
-    onWatchlist()
+    onWatchlist(activeView)
+  }
+
+  const handleViewChange = (viewId) => {
+    setActiveView(viewId)
+    onWatchlist(viewId)
   }
 
   return (
@@ -25,6 +39,7 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
         </span>
       </div>
 
+      {/* Mode toggle */}
       <div className="flex gap-1 mb-3">
         <button
           onClick={() => setMode('search')}
@@ -37,7 +52,7 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
           <Search size={9} /> Entity Search
         </button>
         <button
-          onClick={handleWatchlist}
+          onClick={handleWatchlistMode}
           className={`flex-1 flex items-center justify-center gap-1.5 text-[10px] font-medium py-1 rounded transition-colors ${
             mode === 'watchlist'
               ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
@@ -48,6 +63,7 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
         </button>
       </div>
 
+      {/* Search form */}
       {mode === 'search' && (
         <form onSubmit={handleSubmit} className="space-y-2">
           <div>
@@ -73,9 +89,28 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
         </form>
       )}
 
-      {mode === 'watchlist' && !loading && (
-        <div className="text-xs text-slate-600 italic text-center py-1">
-          Showing top emerging-risk entities
+      {/* Watchlist view selector */}
+      {mode === 'watchlist' && (
+        <div className="space-y-1">
+          <div className="text-[10px] text-slate-600 uppercase tracking-widest mb-2">Sort / Filter</div>
+          {WATCHLIST_VIEWS.map(({ id, label, icon: Icon, desc }) => (
+            <button
+              key={id}
+              disabled={loading}
+              onClick={() => handleViewChange(id)}
+              className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+                activeView === id
+                  ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                  : 'text-slate-500 hover:text-slate-400 border border-transparent hover:bg-slate-800/40'
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Icon size={10} className="flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[11px] font-medium leading-none">{label}</div>
+                <div className="text-[9px] text-slate-600 mt-0.5">{desc}</div>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 

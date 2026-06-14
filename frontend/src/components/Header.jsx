@@ -1,14 +1,14 @@
-import { Shield, Database, WifiOff, Clock, TrendingUp } from 'lucide-react'
+import { TrendingUp, Database, WifiOff } from 'lucide-react'
 
-export default function Header({ health, appMode, onModeChange }) {
+export default function Header({ health }) {
   return (
     <header className="h-14 border-b border-slate-800 bg-bg-1 flex items-center px-4 gap-4 flex-shrink-0 z-20">
       {/* Brand */}
       <div className="flex items-center gap-2.5 select-none">
         <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-          <Shield size={15} className="text-white" strokeWidth={2.5} />
+          <TrendingUp size={15} className="text-white" strokeWidth={2.5} />
         </div>
-        <span className="font-semibold text-slate-100 tracking-tight">SanctionScreen</span>
+        <span className="font-semibold text-slate-100 tracking-tight">Temporal Risk</span>
         <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-bg-3 text-slate-400 border border-slate-700">
           v0.3
         </span>
@@ -16,45 +16,9 @@ export default function Header({ health, appMode, onModeChange }) {
 
       <div className="w-px h-6 bg-slate-800 mx-1" />
 
-      {/* Mode toggle */}
-      <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5 border border-slate-800">
-        <button
-          onClick={() => onModeChange?.('sanctions')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-            appMode === 'sanctions'
-              ? 'bg-slate-700 text-slate-200'
-              : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <Shield size={11} /> Sanctions
-        </button>
-        <button
-          onClick={() => onModeChange?.('temporal')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-            appMode === 'temporal'
-              ? 'bg-slate-700 text-slate-200'
-              : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <TrendingUp size={11} /> Temporal Risk
-        </button>
-      </div>
-
-      <div className="w-px h-6 bg-slate-800 mx-1" />
-
-      {/* OFAC source indicator */}
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Database size={13} />
-        <span>OFAC SDN List</span>
-        <a
-          href="https://ofac.treasury.gov/downloads/sdn.xml"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
-        >
-          sdn.xml
-        </a>
-      </div>
+      <span className="text-xs text-slate-500">
+        Emerging sanctions risk prediction · synthetic ownership graph data
+      </span>
 
       <div className="flex-1" />
 
@@ -69,10 +33,6 @@ export default function Header({ health, appMode, onModeChange }) {
             <Database size={11} />
             <span>{health.entities?.toLocaleString()} entities</span>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <span className="mono text-slate-500">₿</span>
-            <span>{health.crypto_addresses?.toLocaleString()} crypto</span>
-          </div>
         </div>
       ) : (
         <div className="flex items-center gap-1.5 text-xs text-red-400">
@@ -80,21 +40,6 @@ export default function Header({ health, appMode, onModeChange }) {
           <span>API Offline</span>
         </div>
       )}
-
-      {/* Source info */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-500">
-        <Clock size={11} />
-        <span>Updated daily</span>
-      </div>
-
-      <a
-        href="https://sanctionssearch.ofac.treas.gov/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs px-2.5 py-1 rounded border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
-      >
-        OFAC Search ↗
-      </a>
     </header>
   )
 }

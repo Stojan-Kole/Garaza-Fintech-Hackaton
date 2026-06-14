@@ -18,8 +18,9 @@ class TemporalRiskEngine:
         self.graphs: dict = {}
         self.metrics: dict = {}
         self.predictor = RiskPredictor()
-        self._entity_index: dict = {}   # id -> name
-        self._id_to_type: dict = {}     # id -> person|company
+        self._entity_index: dict = {}       # id -> name
+        self._id_to_type: dict = {}         # id -> person|company
+        self._watchlist_cache: list = []    # pre-scored at startup
         self._initialized = False
 
     def initialize(self, force_retrain: bool = False) -> None:
@@ -40,6 +41,9 @@ class TemporalRiskEngine:
         if not force_retrain and self.predictor.load():
             print("[Temporal] Loaded cached model.")
             self._initialized = True
+            print("[Temporal] Pre-scoring watchlist...")
+            self._watchlist_cache = self._score_all_entities()
+            print(f"[Temporal] Watchlist ready: {len(self._watchlist_cache)} entities.")
             return
 
         print("[Temporal] Extracting features and training model...")
@@ -50,6 +54,10 @@ class TemporalRiskEngine:
         self.predictor.save()
         print("[Temporal] Model trained and cached.")
         self._initialized = True
+
+        print("[Temporal] Pre-scoring watchlist...")
+        self._watchlist_cache = self._score_all_entities()
+        print(f"[Temporal] Watchlist ready: {len(self._watchlist_cache)} entities.")
 
     def _build_training_data(self) -> tuple:
         years = sorted(self.snapshots.keys())
@@ -148,34 +156,62 @@ class TemporalRiskEngine:
             })
         return results
 
-    def get_high_risk_entities(self, limit: int = 50) -> list:
-        """Return top entities by current risk score (excludes already-blacklisted)."""
-        if not self._initialized:
-            return []
+    def _score_all_entities(self) -> list:
+        """Score every non-blacklisted entity at current + previous year. Called once at startup."""
         years = sorted(self.snapshots.keys())
         latest_year = years[-1]
+        prev_year = years[-2]
         latest_snap = self.snapshots[latest_year]
 
-        scored = []
+        result = []
         for eid in self._entity_index:
             if eid in latest_snap.blacklist:
                 continue
             feats = self._get_features_for_year(eid, latest_year)
             score, _ = self.predictor.predict(feats)
-            if score >= 20:
-                scored.append((score, eid))
-
-        scored.sort(reverse=True)
-        result = []
-        for score, eid in scored[:limit]:
+            prev_feats = self._get_features_for_year(eid, prev_year)
+            prev_score, _ = self.predictor.predict(prev_feats)
             result.append({
                 "id": eid,
                 "name": self._entity_index[eid],
                 "type": self._id_to_type.get(eid, "unknown"),
-                "risk_score": score,
+                "risk_score": round(score, 1),
                 "risk_level": _risk_level(score),
+                "prev_score": round(prev_score, 1),
+                "score_delta": round(score - prev_score, 1),
             })
         return result
+
+    def get_high_risk_entities(self, limit: int = 50, view: str = "top") -> list:
+        data = self._watchlist_cache
+        if view == "top":
+            filtered = sorted(
+                (e for e in data if e["risk_score"] >= 20),
+                key=lambda x: x["risk_score"], reverse=True,
+            )
+        elif view == "rising":
+            filtered = sorted(
+                (e for e in data if e["score_delta"] > 0),
+                key=lambda x: x["score_delta"], reverse=True,
+            )
+        elif view == "critical_edge":
+            filtered = sorted(
+                (e for e in data if 60 <= e["risk_score"] < 80),
+                key=lambda x: x["risk_score"], reverse=True,
+            )
+        elif view == "name":
+            filtered = sorted(
+                (e for e in data if e["risk_score"] >= 20),
+                key=lambda x: x["name"],
+            )
+        elif view == "declining":
+            filtered = sorted(
+                (e for e in data if e["score_delta"] < 0),
+                key=lambda x: x["score_delta"],
+            )
+        else:
+            filtered = sorted(data, key=lambda x: x["risk_score"], reverse=True)
+        return filtered[:limit]
 
 
 def _risk_level(score: float) -> str:
