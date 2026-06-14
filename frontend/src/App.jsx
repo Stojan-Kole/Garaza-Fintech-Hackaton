@@ -260,35 +260,57 @@ export default function App() {
             )}
           </main>
           <aside className="flex flex-col border-l border-slate-800/80 overflow-y-auto bg-bg-1">
-            {temporalResult && (
-              <div className="p-4 space-y-4">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-                  Score Methodology
+            <div className="p-4 space-y-5">
+              {/* Risk level legend — always visible */}
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+                  Risk Levels &amp; Actions
                 </div>
                 {[
-                  { label: 'Graph proximity to blacklisted entities', color: 'bg-red-400' },
-                  { label: 'Ownership structure changes over time', color: 'bg-amber-400' },
-                  { label: 'Network centrality & degree', color: 'bg-blue-400' },
-                  { label: 'Name similarity to sanctions list', color: 'bg-purple-400' },
-                  { label: 'High-risk jurisdiction association', color: 'bg-orange-400' },
-                ].map(({ label, color }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color}`} />
-                    <span className="text-xs text-slate-500">{label}</span>
+                  { range: '0–14',   level: 'LOW',       bar: 'bg-green-500',  badge: 'text-green-400',  action: 'No action required. Standard monitoring.' },
+                  { range: '15–34',  level: 'ELEVATED',  bar: 'bg-blue-500',   badge: 'text-blue-400',   action: 'Flag for periodic review. Watch for upward trend.' },
+                  { range: '35–59',  level: 'HIGH',      bar: 'bg-amber-500',  badge: 'text-amber-400',  action: 'Escalate to compliance officer. Enhanced due diligence.' },
+                  { range: '60–79',  level: 'VERY HIGH', bar: 'bg-orange-500', badge: 'text-orange-400', action: 'Senior review required. Consider transaction restrictions.' },
+                  { range: '80–100', level: 'CRITICAL',  bar: 'bg-red-500',    badge: 'text-red-400',    action: 'Immediate escalation. Block until cleared.' },
+                ].map(({ range, level, bar, badge, action }) => (
+                  <div key={level} className="flex gap-2.5 mb-3">
+                    <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${bar}`} />
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className={`text-[11px] font-bold ${badge}`}>{level}</span>
+                        <span className="text-[10px] font-mono text-slate-600">{range}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">{action}</p>
+                    </div>
                   </div>
                 ))}
-                <div className="border-t border-slate-800 pt-3 text-[10px] text-slate-700 leading-relaxed">
-                  Model: Random Forest trained on synthetic temporal data.
-                  Score = probability of pre-blacklist pattern × 100.
-                  Not a legal prediction or sanctions determination.
+              </div>
+
+              {/* Score drivers — always visible */}
+              <div className="border-t border-slate-800 pt-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+                  What Drives the Score
                 </div>
+                {[
+                  { label: 'Proximity to blacklisted entities', desc: 'Distance and connections to already-sanctioned nodes in the ownership graph — the strongest signal.' },
+                  { label: 'Ownership structure changes', desc: 'Rapid restructuring of ownership links in the 1–2 years before designation is a known pre-sanction pattern.' },
+                  { label: 'Network centrality', desc: 'Entities that act as hubs between many other entities carry higher systemic risk.' },
+                  { label: 'Name similarity to SDN list', desc: 'Phonetic and string closeness to names already on OFAC sanctions lists.' },
+                  { label: 'High-risk jurisdiction', desc: 'Nationality or registration in FATF-blacklisted or OFAC-sanctioned countries.' },
+                ].map(({ label, desc }) => (
+                  <div key={label} className="mb-3">
+                    <span className="text-[11px] text-slate-400 font-medium">{label}</span>
+                    <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">{desc}</p>
+                  </div>
+                ))}
               </div>
-            )}
-            {!temporalResult && (
-              <div className="p-4 text-xs text-slate-700 italic">
-                Entity risk breakdown appears after analysis.
+
+              <div className="border-t border-slate-800 pt-3 text-[10px] text-slate-700 leading-relaxed">
+                Model: Random Forest on 17 features, trained on synthetic data.
+                Score = estimated probability of pre-blacklist pattern × 100.
+                Not a legal determination. Requires compliance officer sign-off before action.
               </div>
-            )}
+            </div>
           </aside>
         </div>
       )}

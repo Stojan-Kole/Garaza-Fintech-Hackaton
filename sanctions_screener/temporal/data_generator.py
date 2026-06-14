@@ -1,12 +1,12 @@
 """
 Synthetic temporal dataset generator.
-Produces 1000 persons + 500 companies across 9 years (2016-2024).
+Produces 1000 persons + 500 companies across 11 years (2016-2026).
 """
 from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-YEARS = list(range(2016, 2025))
+YEARS = list(range(2016, 2027))
 N_PERSONS = 1000
 N_COMPANIES = 500
 SEED = 42
@@ -138,7 +138,7 @@ def generate_dataset() -> dict:
     blacklist_targets = rng.sample(all_entity_ids, n_to_blacklist)
     blacklist_year: dict = {}
     for eid in blacklist_targets:
-        blacklist_year[eid] = rng.randint(2018, 2024)
+        blacklist_year[eid] = rng.randint(2018, 2026)
 
     # Base ownership structure
     base_ownerships = []
