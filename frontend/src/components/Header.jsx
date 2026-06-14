@@ -1,8 +1,6 @@
-import { Shield, Database, Wifi, WifiOff, Clock } from 'lucide-react'
+import { Shield, Database, WifiOff, Clock, TrendingUp } from 'lucide-react'
 
-export default function Header({ health }) {
-  const online = health?.status === 'ok'
-
+export default function Header({ health, appMode, onModeChange }) {
   return (
     <header className="h-14 border-b border-slate-800 bg-bg-1 flex items-center px-4 gap-4 flex-shrink-0 z-20">
       {/* Brand */}
@@ -12,8 +10,34 @@ export default function Header({ health }) {
         </div>
         <span className="font-semibold text-slate-100 tracking-tight">SanctionScreen</span>
         <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-bg-3 text-slate-400 border border-slate-700">
-          v0.2
+          v0.3
         </span>
+      </div>
+
+      <div className="w-px h-6 bg-slate-800 mx-1" />
+
+      {/* Mode toggle */}
+      <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5 border border-slate-800">
+        <button
+          onClick={() => onModeChange?.('sanctions')}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            appMode === 'sanctions'
+              ? 'bg-slate-700 text-slate-200'
+              : 'text-slate-500 hover:text-slate-400'
+          }`}
+        >
+          <Shield size={11} /> Sanctions
+        </button>
+        <button
+          onClick={() => onModeChange?.('temporal')}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            appMode === 'temporal'
+              ? 'bg-slate-700 text-slate-200'
+              : 'text-slate-500 hover:text-slate-400'
+          }`}
+        >
+          <TrendingUp size={11} /> Temporal Risk
+        </button>
       </div>
 
       <div className="w-px h-6 bg-slate-800 mx-1" />

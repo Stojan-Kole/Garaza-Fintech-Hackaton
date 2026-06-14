@@ -6,9 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/screen': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
-      '/graph':  'http://localhost:8000',
+      '/screen':   'http://localhost:8000',
+      '/analyze':  'http://localhost:8000',
+      '/health':   'http://localhost:8000',
+      '/graph':    'http://localhost:8000',
+      '/temporal': 'http://localhost:8000',
     },
   },
 })
