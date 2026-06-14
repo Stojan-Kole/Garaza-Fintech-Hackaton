@@ -1,121 +1,115 @@
-# Sanctions Screener
+# Temporal Risk Prediction
 
-Screen payment instructions against the OFAC SDN list.
-Returns one of three verdicts: **MATCH**, **REVIEW**, or **NO_MATCH**.
+> *"We moved sanctions compliance from reactive to predictive — from 'is this person on a list' to 'is this person heading toward a list.'"*
 
-## Architecture
+Sanctions lists are always one step behind. By the time a name appears on OFAC's SDN list, the damage is done — money has moved, relationships exist, exposure is real.
+
+This system predicts **which entities are exhibiting pre-sanction behavioral patterns** before any official designation occurs, giving compliance teams time to act rather than react.
+
+---
+
+## How it works
 
 ```mermaid
 flowchart TD
-    A[Payment Instruction] --> B{fiat or crypto?}
+    A[Entity Name] --> B[Ownership Graph Analysis]
+    B --> C[17 Feature Extraction per Year]
 
-    B -->|name + country| FIAT[Fiat Screening]
-    B -->|wallet address| CRYPTO[Crypto Screening]
+    C --> F1[Graph proximity to sanctioned nodes]
+    C --> F2[Ownership structure changes YoY]
+    C --> F3[Network centrality & gatekeeping role]
+    C --> F4[Name similarity to SDN list]
+    C --> F5[High-risk jurisdiction exposure]
 
-    FIAT --> N1[NFKC normalize + lowercase]
-    N1 --> N2[unidecode transliteration\nCyrillic / Arabic / CJK to Latin]
-    N2 --> N3[strip punctuation]
-    N3 --> M[Score vs all SDN entries + aliases]
-
-    M --> M1[Token-sort JaroWinkler\nhandles LAST FIRST vs FIRST LAST]
-    M --> M2[Metaphone phonetics per token\nMohammed ~ Muhammad]
-    M1 & M2 --> S[Combined score: 0.7 string + 0.3 phonetic]
-    S --> CA[Country signal\n+0.05 confirmed / -0.10 conflict]
-
-    CRYPTO --> CL[Exact lookup in address index]
-    CL -->|found| MATCH
-
-    CA --> T{Score threshold}
-    T -->|score >= 0.92| MATCH[MATCH: block payment]
-    T -->|0.78 to 0.91| REVIEW[REVIEW: route to analyst]
-    T -->|score < 0.78| NOMATCH[NO_MATCH: release payment]
+    F1 & F2 & F3 & F4 & F5 --> M[Random Forest Classifier]
+    M --> S[Emerging Risk Score 0–100]
+    S --> R[Compliance Assessment + Recommended Action]
 ```
 
-## Data source
+The model is trained on 11 years of ownership graph data (2016–2026) across 1,500 entities. The key insight baked into the training data: **entities that become sanctioned start acquiring ownership connections to already-sanctioned entities 1–2 years before their designation.** The model learns to recognize this pattern.
 
-OFAC Specially Designated Nationals (SDN) list — public domain, updated daily.
-Downloaded automatically on first startup and cached to `.cache/sdn.xml`.
+---
 
-- ~12,000 designated entities
-- Includes all aliases (a.k.a. / f.k.a.)
-- Includes sanctioned cryptocurrency addresses (BTC, ETH, XMR, USDT, etc.)
+## Risk levels
+
+| Score | Level | Recommended Action |
+|-------|-------|--------------------|
+| 0–14 | **LOW** | No action. Standard monitoring. |
+| 15–34 | **ELEVATED** | Flag for quarterly review. Monitor trend. |
+| 35–59 | **HIGH** | Escalate to compliance officer. Enhanced due diligence. |
+| 60–79 | **VERY HIGH** | Senior review. Consider transaction restrictions. |
+| 80–100 | **CRITICAL** | Block immediately. Escalate. Regulatory notification may apply. |
+
+---
+
+## What drives the score (17 features)
+
+| Category | Features |
+|----------|----------|
+| **Sanctions proximity** | Distance to nearest sanctioned entity, direct sanctioned connections, paths through sanctioned network, propagated network risk |
+| **Ownership dynamics** | Changes in ownership last year, new connections acquired, portfolio growth rate, restructuring intensity |
+| **Network structure** | Betweenness centrality, total ownership links, companies controlled, ownership chain depth |
+| **Identity signals** | Name similarity to SDN list, number of aliases |
+| **Jurisdiction** | High-risk country association (FATF blacklist / OFAC country programs) |
+
+---
 
 ## Setup
 
 ```bash
+# Backend
 pip install -r requirements.txt
-uvicorn api:app --reload
+uvicorn api:app --reload --port 8000
 ```
 
-On first start the SDN XML (~30 MB) is downloaded. Subsequent starts use the cache.
+First start trains the Random Forest model (~30–60 seconds) and pre-scores the watchlist. Both are cached — subsequent starts are instant.
+
+```bash
+# Frontend
+cd frontend
+npm install
+npm run dev      # → http://localhost:5173
+```
+
+---
 
 ## API
 
-### `POST /screen`
+### `POST /temporal/analyze`
+Search for an entity by name and return full risk profile.
 
 ```json
-// Fiat transfer
-{
-  "name": "Sergei Ivanov",
-  "country": "Russia"
-}
-
-// Crypto transfer
-{
-  "wallet_address": "1FzWLkAahHooV3kzTgyx6qsswXJ6sCXkSR"
-}
+{ "entity_name": "Vladimir Petrov", "top_k": 5 }
 ```
 
-Response:
+Response includes: `risk_score`, `risk_level`, `reasons`, `history` (year-by-year scores), `feature_breakdown` (all 17 features with business descriptions), `blacklisted_neighbors`, `search_candidates`.
 
-```json
-{
-  "verdict": "MATCH",
-  "score": 0.97,
-  "matched_entity": "IVANOV, Sergei Borisovich",
-  "matched_alias": "IVANOV, Sergei",
-  "programs": ["UKRAINE-EO13661"],
-  "country_signal": "confirmed",
-  "reason": "High-confidence hit: ...",
-  "top_candidates": [...]
-}
-```
+### `GET /temporal/watchlist?limit=50&view=top`
+
+Returns ranked list of non-sanctioned entities with elevated risk. `view` options:
+
+| View | Description |
+|------|-------------|
+| `top` | Highest current risk score |
+| `rising` | Biggest year-over-year increase — early warning signal |
+| `critical_edge` | Score 60–79 — next in line for escalation |
+| `declining` | Biggest year-over-year decrease |
+| `name` | Alphabetical |
+
+### `GET /temporal/search?q=ivanov&top_k=10`
+Fuzzy name search (Jaro-Winkler, threshold 0.55).
 
 ### `GET /health`
-
 ```json
-{"status": "ok", "entities": 12483, "crypto_addresses": 847}
+{ "status": "ok", "entities": 1500 }
 ```
 
-## Verdict logic
+---
 
-| Score | Verdict | Action |
-|-------|---------|--------|
-| ≥ 0.92 | **MATCH** | Block payment automatically |
-| 0.78 – 0.91 | **REVIEW** | Route to human analyst |
-| < 0.78 | **NO_MATCH** | Release payment |
+## What makes this different
 
-Country signal adjusts the name score: **+0.05** on country match, **−0.10** on country conflict.
-This means a near-perfect name match in the wrong country can be pushed down to REVIEW instead of MATCH.
+Existing compliance tools (Refinitiv World-Check, Chainalysis, TRM Labs) answer one question: *"Is this entity sanctioned right now?"*
 
-## Name matching examples
+This system answers a different question: *"Is this entity behaving like entities that get sanctioned?"*
 
-| Input | SDN alias | Score | Verdict |
-|-------|-----------|-------|---------|
-| Sergei Ivanov | IVANOV Sergei | 1.00 | MATCH |
-| Sergey Ivanov | IVANOV Sergei | ~0.95 | MATCH |
-| Сергей Иванов | IVANOV Sergei | ~0.93 | MATCH |
-| Mohammed Al-Rashid | MOHAMMAD AL RASHID | ~0.89 | MATCH |
-| Muhammad Al Rashid | MOHAMMAD AL RASHID | ~0.91 | MATCH |
-| Xi Jinping | XI Jinping | ~0.98 | MATCH |
-| John Smith | — | ~0.55 | NO_MATCH |
-
-## Limitations
-
-- SDN only: does not include EU Consolidated List, UN List, or HMT (UK) list.
-  These are parseable in the same pattern and can be added as additional loaders.
-- Crypto screening is exact-match only. Indirect exposure (funds routed through
-  sanctioned addresses) requires a blockchain analytics provider (Chainalysis, TRM).
-- Transliteration via `unidecode` is lossy. Arabic → Latin is approximate; errors
-  are partially compensated by the Metaphone phonetic layer.
-- Thresholds (0.92 / 0.78) are starting points. Calibrate on your own labeled data.
+That's the shift from reactive screening to predictive intelligence.

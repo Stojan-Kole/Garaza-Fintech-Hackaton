@@ -179,9 +179,9 @@ export default function App() {
             </div>
 
             <div className="border-t border-slate-800 pt-3 text-[10px] text-slate-700 leading-relaxed">
-              Model: Random Forest on 17 features, trained on synthetic data.
-              Score = estimated probability of pre-blacklist pattern × 100.
-              Not a legal determination. Requires compliance officer sign-off before action.
+              Model: Random Forest classifier on 17 ownership graph features.
+              Score = estimated probability of pre-designation behavioral pattern × 100.
+              Requires compliance officer review before any action is taken.
             </div>
           </div>
         </aside>

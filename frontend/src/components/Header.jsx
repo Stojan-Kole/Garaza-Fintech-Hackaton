@@ -17,7 +17,7 @@ export default function Header({ health }) {
       <div className="w-px h-6 bg-slate-800 mx-1" />
 
       <span className="text-xs text-slate-500">
-        Emerging sanctions risk prediction · synthetic ownership graph data
+        Emerging sanctions risk prediction · ownership graph analysis
       </span>
 
       <div className="flex-1" />

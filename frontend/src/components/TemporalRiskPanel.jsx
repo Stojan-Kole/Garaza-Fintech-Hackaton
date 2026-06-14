@@ -298,7 +298,7 @@ export default function TemporalRiskPanel({ result, onSelectAlternate }) {
             <div className="text-base font-semibold text-slate-200 truncate max-w-[200px]" title={entity_name}>
               {entity_name}
             </div>
-            <div className="text-[10px] text-slate-600">{entity_type} · synthetic data · {current_year}</div>
+            <div className="text-[10px] text-slate-600">{entity_type} · {current_year}</div>
           </div>
           {blacklisted && (
             <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30">

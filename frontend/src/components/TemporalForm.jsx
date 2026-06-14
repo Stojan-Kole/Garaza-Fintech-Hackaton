@@ -115,8 +115,7 @@ export default function TemporalForm({ onAnalyze, onWatchlist, loading }) {
       )}
 
       <div className="mt-3 text-[10px] text-slate-700 leading-relaxed">
-        Scores reflect similarity to pre-blacklist patterns in synthetic data.
-        Not a legal prediction.
+        Scores indicate statistical similarity to pre-designation behavioral patterns.
       </div>
     </div>
   )
